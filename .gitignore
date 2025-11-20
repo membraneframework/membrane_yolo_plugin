@@ -1,3 +1,5 @@
+examples/models/*.onnx
+
 compile_commands.json
 .gdb_history
 bundlex.sh

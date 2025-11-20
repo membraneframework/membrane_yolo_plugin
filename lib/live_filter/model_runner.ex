@@ -1,7 +1,8 @@
 defmodule Membrane.YOLO.LiveFilter.ModelRunner do
+  @moduledoc false
   use GenServer
 
-  def start_link(yolo_model, draw_boxes, latency, stream_format, parent_process) do
+  def start_link({yolo_model, draw_boxes, latency, stream_format, parent_process}) do
     GenServer.start_link(__MODULE__,
       yolo_model: yolo_model,
       draw_boxes: draw_boxes,
@@ -31,18 +32,15 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
 
   @impl true
   def handle_cast({:process_buffer, buffer}, state) do
-    state =
-      if state.first_buffer_ts == nil,
-        do: handle_first_buffer(buffer, state),
-        else: state
-
     if not state.detection_in_progress? do
       my_pid = self()
 
       Task.start_link(fn ->
+        {:ok, image} = Membrane.RawVideo.payload_to_image(buffer.payload, state.stream_format)
+
         detected_objects =
           state.yolo_model
-          |> YOLO.detect(buffer.payload, frame_scaler: YOLO.FrameScalers.ImageScaler)
+          |> YOLO.detect(image, frame_scaler: YOLO.FrameScalers.ImageScaler)
           |> YOLO.to_detected_objects(state.yolo_model.classes)
 
         GenServer.cast(my_pid, {:detection_complete, detected_objects})
@@ -55,11 +53,12 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
 
   @impl true
   def handle_cast({:detection_complete, detected_objects}, state) do
-    state.buffers_qex
-    |> Enum.each(fn buffer ->
-      buffer = buffer |> maybe_draw_boxes(detected_objects, state)
-      send(state.parent_process, {:processed_buffer, buffer})
-    end)
+    state =
+      state.buffers_qex
+      |> Enum.reduce(state, fn buffer, state ->
+        buffer = buffer |> maybe_draw_boxes(detected_objects, state)
+        send_buffer(buffer, state)
+      end)
 
     state = %{state | detection_in_progress?: false, buffers_qex: Qex.new()}
 
@@ -82,12 +81,18 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
     end
   end
 
-  def send_buffer(buffer, state) when state.latency == nil do
+  defp send_buffer(buffer, state) when state.latency == nil do
     send(state.parent_process, {:processed_buffer, buffer})
+    state
   end
 
-  def send_buffer(buffer, state) do
-    ts_diff = Membrane.Buffer.get_dts_or_pts(buffer) - state.first_buffer_ts
+  defp send_buffer(buffer, state) do
+    state =
+      if state.first_buffer_ts == nil,
+        do: handle_first_buffer(buffer, state),
+        else: state
+
+    ts_diff = buffer.pts - state.first_buffer_ts
     desired_time = state.first_buffer_monotonic_time + state.latency + ts_diff
 
     send_after_timeout =
@@ -96,12 +101,14 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
       |> Membrane.Time.as_milliseconds(:round)
 
     Process.send_after(state.parent_process, {:processed_buffer, buffer}, send_after_timeout)
+
+    state
   end
 
   defp handle_first_buffer(buffer, state) do
     %{
       state
-      | first_buffer_ts: Membrane.Buffer.get_dts_or_pts(buffer),
+      | first_buffer_ts: buffer.pts,
         first_buffer_monotonic_time: Membrane.Time.monotonic_time()
     }
   end

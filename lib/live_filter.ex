@@ -77,16 +77,16 @@ defmodule Membrane.YOLO.LiveFilter do
       Membrane.UtilitySupervisor.start_link_child(
         ctx.utility_supervisor,
         {__MODULE__.ModelRunner,
-         [
+         {
            state.yolo_model,
            state.draw_boxes,
            state.additional_latency,
            stream_format,
-           state.parent_process
-         ]}
+           self()
+         }}
       )
 
-    {[], %{state | model_runner: model_runner}}
+    {[stream_format: {:output, stream_format}], %{state | model_runner: model_runner}}
   end
 
   @impl true
