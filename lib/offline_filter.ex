@@ -67,9 +67,9 @@ defmodule Membrane.YOLO.OfflineFilter do
       Membrane.RawVideo.payload_to_image(buffer.payload, ctx.pads.input.stream_format)
 
     detected_objects =
-      state.model
+      state.yolo_model
       |> YOLO.detect(image, frame_scaler: YOLO.FrameScalers.ImageScaler)
-      |> YOLO.to_detected_objects(state.model.classes)
+      |> YOLO.to_detected_objects(state.yolo_model.classes)
 
     image =
       case state.draw_boxes do

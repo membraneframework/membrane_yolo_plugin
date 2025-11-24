@@ -17,6 +17,7 @@ Mix.install(
     {:exla, "~> 0.10"}
   ],
   config: [
+    logger: [level: :info],
     ortex: [
       {Ortex.Native, [features: [hardware_acceleration]]}
     ],
@@ -37,13 +38,15 @@ if not File.exists?(model_path) do
   File.write!(model_path, data)
 end
 
-defmodule YOLOCameraCapturePipeline do
+defmodule YOLOMP4Pipeline do
   use Membrane.Pipeline
 
   @impl true
   def handle_init(_ctx, _opts) do
     spec =
-      child(:camera_capture, Membrane.CameraCapture)
+      child(:mp4_source, %Boombox.Bin{input: "examples/fixtures/street.mp4"})
+      |> via_out(:output, options: [kind: :video])
+      |> child(:transcoder, %Membrane.Transcoder{output_stream_format: Membrane.RawVideo})
       |> child(:swscale_converter, %Membrane.FFmpeg.SWScale.Converter{
         format: :RGB,
         output_width: 640
@@ -65,5 +68,9 @@ defmodule YOLOCameraCapturePipeline do
   end
 end
 
-{:ok, _supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLOCameraCapturePipeline, [])
-Process.sleep(:infinity)
+{:ok, _supervisor, pipeline} = Membrane.Pipeline.start_link(YOLOMP4Pipeline, [])
+Process.monitor(pipeline)
+
+receive do
+  {:DOWN, _ref, :process, _pid, _reason} -> :ok
+end

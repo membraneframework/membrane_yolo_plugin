@@ -1,7 +1,7 @@
 # Membrane YOLO Plugin demos
 
 ```elixir
-hardware_acceleration = 
+hardware_acceleration =
   case :os.type() do
     {:unix, :darwin} -> :coreml
     {:unix, :linux} -> :cuda
@@ -29,6 +29,13 @@ Mix.install(
   ]
 )
 
+```
+
+## Live detection on a stream from the comptuer camera
+
+After running this piece of code, a player showing the stream with bouncing boxes should appear
+
+```elixir
 tmp_dir = System.tmp_dir!() 
 
 model_name = "yolox_l.onnx"
@@ -41,6 +48,16 @@ if not File.exists?(model_path) do
   %{body: data} = Req.get!(model_url)
   File.write!(model_path, data)
 end
+
+long_mp4_name = "street.mp4"
+long_mp4_path = tmp_dir |> Path.join(long_mp4_name)
+
+
+
+short_mp4_name = "street_short.mp4"
+short_mp4_path = tmp_dir |> Path.join(short_mp4_name)
+
+
 
 classes_path = tmp_dir |> Path.join("coco_classes.json")
 
@@ -133,9 +150,7 @@ File.write!(classes_path, classes_json)
 
 ```
 
-## Live detection on a stream from the comptuer camera
-
-After running this piece of code, a player showing the stream with bouncing boxes should appear
+## Section
 
 ```elixir
 defmodule YOLOCameraCapturePipeline do
