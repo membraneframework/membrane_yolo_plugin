@@ -69,7 +69,7 @@ defmodule YOLOMP4Pipeline do
           pts_ms = Membrane.Time.as_milliseconds(buffer.pts, :round)
 
           Membrane.Logger.info("""
-          Processed #{inspect(pts_ms)} ms of 60_000 ms of fixture video
+          Processed #{inspect(pts_ms)} ms of 10_000 ms of fixture video
           """)
         end
       })
