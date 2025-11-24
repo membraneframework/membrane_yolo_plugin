@@ -2,7 +2,7 @@ defmodule Membrane.YOLO.Mixfile do
   use Mix.Project
 
   @version "0.1.0"
-  @github_url "https://github.com/membraneframework/membrane_template_plugin"
+  @github_url "https://github.com/membraneframework/membrane_yolo_plugin"
 
   def project do
     [
@@ -15,11 +15,11 @@ defmodule Membrane.YOLO.Mixfile do
       dialyzer: dialyzer(),
 
       # hex
-      description: "Template Plugin for Membrane Framework",
+      description: "YOLO Plugin for Membrane Framework",
       package: package(),
 
       # docs
-      name: "Membrane Template plugin",
+      name: "Membrane YOLO plugin",
       source_url: @github_url,
       docs: docs(),
       homepage_url: "https://membrane.stream"
@@ -78,7 +78,7 @@ defmodule Membrane.YOLO.Mixfile do
       extras: ["README.md", "LICENSE"],
       formatters: ["html"],
       source_ref: "v#{@version}",
-      nest_modules_by_prefix: [Membrane.Template]
+      nest_modules_by_prefix: [Membrane.YOLO]
     ]
   end
 end

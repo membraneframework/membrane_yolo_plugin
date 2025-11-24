@@ -66,10 +66,15 @@ defmodule YOLOMP4Pipeline do
 
     {[spec: spec], %{}}
   end
+
+  @impl true
+  def handle_child_notification(:processing_finished, :boombox_sink, ctx, state) do
+    {[terminate: :normal], state}
+  end
 end
 
-{:ok, _supervisor, pipeline} = Membrane.Pipeline.start_link(YOLOMP4Pipeline, [])
-Process.monitor(pipeline)
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLOMP4Pipeline, [])
+Process.monitor(supervisor)
 
 receive do
   {:DOWN, _ref, :process, _pid, _reason} -> :ok

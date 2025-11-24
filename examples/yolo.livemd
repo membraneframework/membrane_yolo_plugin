@@ -30,13 +30,12 @@ Mix.install(
     ]
   ]
 )
-
 ```
 
 ## Download fixtures and model
 
 ```elixir
-tmp_dir = System.tmp_dir!() 
+tmp_dir = System.tmp_dir!()
 
 model_name = "yolox_l.onnx"
 model_path = tmp_dir |> Path.join(model_name)
@@ -49,7 +48,8 @@ if not File.exists?(model_path) do
   File.write!(model_path, data)
 end
 
-fixtures_url = "https://raw.githubusercontent.com/membraneframework/membrane_yolo_plugin/master/examples/fixtures"
+fixtures_url =
+  "https://raw.githubusercontent.com/membraneframework/membrane_yolo_plugin/master/examples/fixtures"
 
 long_mp4_name = "street.mp4"
 long_mp4_path = tmp_dir |> Path.join(long_mp4_name)
@@ -151,7 +151,6 @@ classes_json = """
 """
 
 File.write!(classes_path, classes_json)
-
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
@@ -226,15 +225,15 @@ defmodule YOLOMP4Pipeline do
             classes_path: unquote(classes_path),
             eps: [unquote(hardware_acceleration)]
           ),
-          draw_boxes: &KinoYOLO.Draw.draw_detected_objects/2,
-          additional_latency: Membrane.Time.milliseconds(500)
+        draw_boxes: &KinoYOLO.Draw.draw_detected_objects/2,
+        additional_latency: Membrane.Time.milliseconds(500)
       })
       |> via_in(:input, options: [kind: :video])
       |> child(:boombox_sink, %Boombox.Bin{output: :player})
 
     {[spec: spec], %{}}
   end
-  
+
   @impl true
   def handle_child_notification(:processing_finished, :boombox_sink, _ctx, state) do
     {[terminate: :normal], state}
@@ -273,7 +272,7 @@ defmodule YOLOMP4OfflinePipeline do
   def handle_init(_ctx, _opts) do
     frame = Kino.Frame.new() |> Kino.render()
     Kino.Frame.render(frame, "Processed 0 ms of 10_000 ms of fixture video")
-    
+
     spec =
       child(:mp4_source, %Boombox.Bin{input: unquote(short_mp4_path)})
       |> via_out(:output, options: [kind: :video])
@@ -290,13 +289,16 @@ defmodule YOLOMP4OfflinePipeline do
             classes_path: unquote(classes_path),
             eps: [unquote(hardware_acceleration)]
           ),
-          draw_boxes: &KinoYOLO.Draw.draw_detected_objects/2
+        draw_boxes: &KinoYOLO.Draw.draw_detected_objects/2
       })
       |> child(:debug_logger, %Membrane.Debug.Filter{
         handle_buffer: fn buffer ->
           pts_ms = Membrane.Time.as_milliseconds(buffer.pts, :round)
 
-          Kino.Frame.render(frame, "Processed #{inspect(pts_ms)} ms of 10_000 ms of fixture video")
+          Kino.Frame.render(
+            frame,
+            "Processed #{inspect(pts_ms)} ms of 10_000 ms of fixture video"
+          )
         end
       })
       |> child(:i420_converter, %Membrane.FFmpeg.SWScale.Converter{
