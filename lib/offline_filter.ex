@@ -77,7 +77,7 @@ defmodule Membrane.YOLO.OfflineFilter do
         draw_fun when is_function(draw_fun, 2) -> draw_fun.(image, detected_objects)
       end
 
-    {:ok, payload} = Membrane.RawVideo.image_to_payload(image)
+    {:ok, payload, _stream_format} = Membrane.RawVideo.image_to_payload(image)
     buffer = %Membrane.Buffer{buffer | payload: payload}
 
     buffer =

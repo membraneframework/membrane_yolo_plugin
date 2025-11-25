@@ -36,7 +36,8 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
       my_pid = self()
 
       Task.start_link(fn ->
-        {:ok, image} = Membrane.RawVideo.payload_to_image(buffer.payload, state.stream_format)
+        {:ok, image, _stream_format} =
+          Membrane.RawVideo.payload_to_image(buffer.payload, state.stream_format)
 
         detected_objects =
           state.yolo_model
@@ -74,7 +75,9 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
         }
 
       draw_fun when is_function(draw_fun, 2) ->
-        {:ok, image} = Membrane.RawVideo.payload_to_image(buffer.payload, state.stream_format)
+        {:ok, image, _stream_format} =
+          Membrane.RawVideo.payload_to_image(buffer.payload, state.stream_format)
+
         image = draw_fun.(image, detected_objects)
         {:ok, new_payload} = Membrane.RawVideo.image_to_payload(image)
         %Membrane.Buffer{buffer | payload: new_payload}
