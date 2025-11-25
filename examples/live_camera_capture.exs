@@ -18,7 +18,6 @@ Mix.install(
     {:exla, "~> 0.10"}
   ],
   config: [
-    logger: [level: :info],
     ortex: [
       {Ortex.Native, [features: [hardware_acceleration]]}
     ],
@@ -27,6 +26,8 @@ Mix.install(
     ]
   ]
 )
+
+Logger.configure(level: :info)
 
 model_name = "yolox_l.onnx"
 model_path = Path.join("examples/models", model_name)
