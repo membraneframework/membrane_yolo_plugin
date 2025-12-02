@@ -13,8 +13,7 @@ Mix.install(
     {:membrane_core, "~> 1.0"},
     {:membrane_camera_capture_plugin, "~> 0.7.3"},
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
-    {:membrane_raw_video_format,
-     github: "membraneframework/membrane_raw_video_format", branch: "to_image", override: true},
+    {:membrane_raw_video_format, "~> 0.4.3"},
     {:boombox, github: "membraneframework/boombox"},
     {:kino_yolo, github: "poeticoding/kino_yolo"},
     {:exla, "~> 0.10"}

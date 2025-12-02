@@ -7,6 +7,10 @@ hardware_acceleration =
     {:unix, :linux} -> :cuda
   end
 
+with {:unix, :darwin} <- :os.type() do
+  System.put_env("PATH", "/opt/homebrew/bin:#{System.get_env("PATH")}")
+end
+
 Mix.install(
   [
     {:membrane_yolo_plugin,
@@ -14,8 +18,7 @@ Mix.install(
     {:membrane_core, "~> 1.0"},
     {:membrane_camera_capture_plugin, "~> 0.7.3"},
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
-    {:membrane_raw_video_format,
-     github: "membraneframework/membrane_raw_video_format", override: true},
+    {:membrane_raw_video_format, "~> 0.16.3"},
     {:boombox, github: "membraneframework/boombox"},
     {:kino_yolo, github: "poeticoding/kino_yolo"},
     {:exla, "~> 0.10"},
@@ -80,11 +83,13 @@ if not File.exists?(classes_path) do
   %{status: 200, body: data} = Req.get!(classes_url)
   File.write!(classes_path, data)
 end
+
+:ok
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Live objec detection on a stream from the comptuer camera
+## Live object detection on a stream from the local camera
 
 Let's define a Membrane Pipeline, that takes a video stream from the computer camera and performs live object detection...
 
@@ -118,7 +123,7 @@ defmodule YOLO.CameraCapture.Pipeline do
 end
 ```
 
-... and run it. After up to few seconds a player showing the stream with bouncing boxes should appear.
+... and run it. After up to few seconds a player showing the stream with bouncing boxes should appear. If it is not visible after few seconds, look for it in the dock.
 
 ```elixir
 {:ok, _supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.CameraCapture.Pipeline, [])
@@ -185,7 +190,7 @@ end
 
 ## Offline object detection on a MP4 file
 
-In both examples above, we have used `Membrane.YOLO.LiveFilter`. If you want to perform offline object detection, because you don't need live performance, you can use `Membrane.YOLO.LiveFilter`.
+In both examples above, we have used `Membrane.YOLO.LiveFilter`. If you want to perform offline object detection, because you don't need live performance, you can use `Membrane.YOLO.OfflineFilter`.
 
 The pipeline below takes an MP4 file, performs object detection on each frame from this file and saves results in another MP4 file.
 
