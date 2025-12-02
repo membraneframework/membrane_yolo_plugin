@@ -2,14 +2,23 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
   @moduledoc false
   use GenServer
 
-  def start_link({yolo_model, draw_boxes, latency, stream_format, parent_process}) do
-    GenServer.start_link(__MODULE__,
-      yolo_model: yolo_model,
-      draw_boxes: draw_boxes,
-      latency: latency,
-      stream_format: stream_format,
-      parent_process: parent_process
-    )
+  alias Membrane.YOLO.DrawUtils
+
+  defmodule Opts do
+    @enforce_keys [
+      :yolo_model,
+      :draw_boxes?,
+      :additional_latency,
+      :low_latency_mode?,
+      :stream_format,
+      :parent_process
+    ]
+
+    defstruct @enforce_keys
+  end
+
+  def start_link(%__MODULE__.Opts{} = opts) do
+    GenServer.start_link(__MODULE__, opts)
   end
 
   def process_buffer(pid, buffer) do
@@ -17,14 +26,15 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
   end
 
   @impl true
-  def init(opts) do
+  def init(%__MODULE__.Opts{} = opts) do
     state =
-      Map.new(opts)
+      Map.from_struct(opts)
       |> Map.merge(%{
         detection_in_progress?: false,
         buffers_qex: Qex.new(),
         first_buffer_ts: nil,
-        first_buffer_monotonic_time: nil
+        first_buffer_monotonic_time: nil,
+        last_detection_results: nil
       })
 
     {:ok, state}
@@ -48,43 +58,58 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
       end)
     end
 
-    state = state |> Map.update!(:buffers_qex, &Qex.push(&1, buffer))
+    state =
+      cond do
+        state.low_latency_mode? and state.last_detection_results != nil ->
+          buffer
+          |> draw_boxes_or_update_metadata(state)
+          |> send_buffer(state)
+
+        state.low_latency_mode? ->
+          buffer
+          |> send_buffer(state)
+
+        not state.low_latency_mode? ->
+          state
+          |> Map.update!(:buffers_qex, &Qex.push(&1, buffer))
+      end
+
     {:noreply, %{state | detection_in_progress?: true}}
   end
 
   @impl true
   def handle_cast({:detection_complete, detected_objects}, state) do
-    state =
-      state.buffers_qex
-      |> Enum.reduce(state, fn buffer, state ->
-        buffer = buffer |> maybe_draw_boxes(detected_objects, state)
-        send_buffer(buffer, state)
-      end)
+    old_buffers_qex = state.buffers_qex
 
-    state = %{state | detection_in_progress?: false, buffers_qex: Qex.new()}
+    state = %{
+      state
+      | detection_in_progress?: false,
+        buffers_qex: Qex.new(),
+        last_detection_results: detected_objects
+    }
+
+    state =
+      old_buffers_qex
+      |> Enum.reduce(state, fn buffer, state ->
+        buffer
+        |> draw_boxes_or_update_metadata(state)
+        |> send_buffer(state)
+      end)
 
     {:noreply, state}
   end
 
-  defp maybe_draw_boxes(buffer, detected_objects, state) do
-    case state.draw_boxes do
-      false ->
-        %Membrane.Buffer{
-          buffer
-          | metadata: Map.put(buffer.metadata, :detected_objects, detected_objects)
-        }
-
-      draw_fun when is_function(draw_fun, 2) ->
-        {:ok, image} =
-          Membrane.RawVideo.payload_to_image(buffer.payload, state.stream_format)
-
-        image = draw_fun.(image, detected_objects)
-        {:ok, new_payload, _stream_format} = Membrane.RawVideo.image_to_payload(image)
-        %Membrane.Buffer{buffer | payload: new_payload}
-    end
+  defp draw_boxes_or_update_metadata(buffer, state) do
+    DrawUtils.draw_boxes_or_update_metadata(
+      buffer,
+      state.last_detection_results,
+      state.stream_format,
+      state.draw_boxes?
+    )
   end
 
-  defp send_buffer(buffer, state) when state.latency == nil do
+  @zero_seconds Membrane.Time.seconds(0)
+  defp send_buffer(buffer, state) when state.additional_latency in [nil, @zero_seconds] do
     send(state.parent_process, {:processed_buffer, buffer})
     state
   end
@@ -96,7 +121,7 @@ defmodule Membrane.YOLO.LiveFilter.ModelRunner do
         else: state
 
     ts_diff = buffer.pts - state.first_buffer_ts
-    desired_time = state.first_buffer_monotonic_time + state.latency + ts_diff
+    desired_time = state.first_buffer_monotonic_time + state.additional_latency + ts_diff
 
     send_after_timeout =
       (desired_time - Membrane.Time.monotonic_time())

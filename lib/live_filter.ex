@@ -24,25 +24,32 @@ defmodule Membrane.YOLO.LiveFilter do
                 YOLO model used for inference. The result of `YOLO.load/2`.
                 """
               ],
-              draw_boxes: [
-                spec:
-                  false
-                  | (Vix.Vips.Image.t(), detected_objects :: [map()] -> Vix.Vips.Image.t()),
+              draw_boxes?: [
+                spec: boolean(),
+                default: true,
+                description: """
+                If set to `true`, bounding boxes will be drawn on the frames.
+                If set to `false`, the detected objects map will be added to the buffer metadata.
+
+                Defaults to `true`.
+                """
+              ],
+              low_latency_mode?: [
+                spec: boolean(),
                 default: false,
                 description: """
-                Function used to draw bounding boxes on the image. If set to `false`,
-                the detected objects will be added to the buffer metadata under
-                `:detected_objects` key instead of drawing.
+                When set to `true`, the filter will operate in low-latency mode.
+
+                In this mode, the latency introduced by the filter is minimal, however
+                bounding boxes will be delayed related to the frames they correspond to.
+
+                When this flag is set to `false`, the filter latency will equal at least
+                the time taken by the model to process a single frame, but bounding boxes
+                will match the objects in the stream better.
 
                 Defaults to `false`.
 
-                The function will receive two arguments:
-                  - `Vix.Vips.Image.t()` - image on which to draw the boxes
-                  - `detected_objects` - list of detected objects in the format returned by
-                    `YOLO.to_detected_objects/2`.
-
-                The simplest way to draw boxes is to pass `KinoYOLO.Draw.draw_detected_objects/2`
-                function from [kino_yolo](https://github.com/poeticoding/kino_yolo)
+                Option `additional_latency` can be used only if this mode is disabled.
                 """
               ],
               additional_latency: [
@@ -58,11 +65,18 @@ defmodule Membrane.YOLO.LiveFilter do
                 When set, it will be added to the initial latency introduced by the filter.
                 Increasing its value will lower the chance of sending any buffer too late
                 comparing to the timestamp and moment of returning the first buffer.
+
+                This option can be used only when `low_latency_mode?` is not set or it is set
+                to `false`.
                 """
               ]
 
   @impl true
   def handle_init(_ctx, opts) do
+    if opts.low_latency_mode? and opts.additional_latency != Membrane.Time.seconds(0) do
+      raise "`additional_latency` option cannot be used when `low_latency_mode?` is set to `true`"
+    end
+
     state =
       opts
       |> Map.from_struct()
@@ -77,12 +91,13 @@ defmodule Membrane.YOLO.LiveFilter do
       Membrane.UtilitySupervisor.start_link_child(
         ctx.utility_supervisor,
         {__MODULE__.ModelRunner,
-         {
-           state.yolo_model,
-           state.draw_boxes,
-           state.additional_latency,
-           stream_format,
-           self()
+         %__MODULE__.ModelRunner.Opts{
+           yolo_model: state.yolo_model,
+           draw_boxes?: state.draw_boxes?,
+           additional_latency: state.additional_latency,
+           low_latency_mode?: state.low_latency_mode?,
+           stream_format: stream_format,
+           parent_process: self()
          }}
       )
 
