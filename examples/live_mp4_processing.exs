@@ -62,7 +62,8 @@ defmodule YOLOMP4Pipeline do
             model_path: "examples/models/yolox_l.onnx",
             classes_path: "examples/models/coco_classes.json",
             eps: [unquote(hardware_acceleration)]
-          )
+          ),
+        additional_latency: Membrane.Time.milliseconds(500)
       })
       |> via_in(:input, options: [kind: :video])
       |> child(:boombox_sink, %Boombox.Bin{output: :player})

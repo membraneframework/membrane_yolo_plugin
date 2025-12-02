@@ -227,7 +227,6 @@ defmodule YOLOMP4Pipeline do
             classes_path: unquote(classes_path),
             eps: [unquote(hardware_acceleration)]
           ),
-        draw_boxes: &KinoYOLO.Draw.draw_detected_objects/2,
         additional_latency: Membrane.Time.milliseconds(500)
       })
       |> via_in(:input, options: [kind: :video])
@@ -290,8 +289,7 @@ defmodule YOLOMP4OfflinePipeline do
             model_path: unquote(model_path),
             classes_path: unquote(classes_path),
             eps: [unquote(hardware_acceleration)]
-          ),
-        draw_boxes: &KinoYOLO.Draw.draw_detected_objects/2
+          )
       })
       |> child(:debug_logger, %Membrane.Debug.Filter{
         handle_buffer: fn buffer ->
