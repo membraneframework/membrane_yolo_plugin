@@ -42,7 +42,7 @@ if not File.exists?(model_path) do
   File.write!(model_path, data)
 end
 
-defmodule YOLOCameraCapturePipeline do
+defmodule YOLO.CameraCapture.Pipeline do
   use Membrane.Pipeline
 
   @impl true
@@ -61,7 +61,6 @@ defmodule YOLOCameraCapturePipeline do
             classes_path: "examples/models/coco_classes.json",
             eps: [unquote(hardware_acceleration)]
           ),
-        # draw_boxes: &KinoYOLO.Draw.draw_detected_objects/2
         low_latency_mode?: true
       })
       |> via_in(:input, options: [kind: :video])
@@ -71,7 +70,7 @@ defmodule YOLOCameraCapturePipeline do
   end
 end
 
-{:ok, _supervisor, pipeline} = Membrane.Pipeline.start_link(YOLOCameraCapturePipeline, [])
+{:ok, _supervisor, pipeline} = Membrane.Pipeline.start_link(YOLO.CameraCapture.Pipeline, [])
 Process.monitor(pipeline)
 
 receive do

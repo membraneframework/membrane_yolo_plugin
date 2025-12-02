@@ -37,7 +37,8 @@ Logger.configure(level: :info)
 ## Download fixtures and model
 
 ```elixir
-tmp_dir = System.tmp_dir!()
+tmp_dir = System.tmp_dir!() |> Path.join("membrane_yolo_plugin")
+File.mkdir(tmp_dir)
 
 model_name = "yolox_l.onnx"
 model_path = tmp_dir |> Path.join(model_name)
@@ -56,103 +57,29 @@ fixtures_url =
 long_mp4_name = "street.mp4"
 long_mp4_path = tmp_dir |> Path.join(long_mp4_name)
 
-%{status: 200, body: data} = Req.get!("#{fixtures_url}/#{long_mp4_name}")
-File.write!(long_mp4_path, data)
+if not File.exists?(long_mp4_name) do
+  %{status: 200, body: data} = Req.get!("#{fixtures_url}/#{long_mp4_name}")
+  File.write!(long_mp4_path, data)
+end
 
 short_mp4_name = "street_short.mp4"
 short_mp4_path = tmp_dir |> Path.join(short_mp4_name)
 
-%{status: 200, body: data} = Req.get!("#{fixtures_url}/#{short_mp4_name}")
-File.write!(short_mp4_path, data)
+if not File.exists?(short_mp4_path) do
+  %{status: 200, body: data} = Req.get!("#{fixtures_url}/#{short_mp4_name}")
+  File.write!(short_mp4_path, data)
+end
 
-classes_path = tmp_dir |> Path.join("coco_classes.json")
+classes_name = "coco_classes.json"
+classes_path = tmp_dir |> Path.join(classes_name)
 
-classes_json = """
-[
-  "person",
-  "bicycle",
-  "car",
-  "motorcycle",
-  "airplane",
-  "bus",
-  "train",
-  "truck",
-  "boat",
-  "traffic light",
-  "fire hydrant",
-  "stop sign",
-  "parking meter",
-  "bench",
-  "bird",
-  "cat",
-  "dog",
-  "horse",
-  "sheep",
-  "cow",
-  "elephant",
-  "bear",
-  "zebra",
-  "giraffe",
-  "backpack",
-  "umbrella",
-  "handbag",
-  "tie",
-  "suitcase",
-  "frisbee",
-  "skis",
-  "snowboard",
-  "sports ball",
-  "kite",
-  "baseball bat",
-  "baseball glove",
-  "skateboard",
-  "surfboard",
-  "tennis racket",
-  "bottle",
-  "wine glass",
-  "cup",
-  "fork",
-  "knife",
-  "spoon",
-  "bowl",
-  "banana",
-  "apple",
-  "sandwich",
-  "orange",
-  "broccoli",
-  "carrot",
-  "hot dog",
-  "pizza",
-  "donut",
-  "cake",
-  "chair",
-  "couch",
-  "potted plant",
-  "bed",
-  "dining table",
-  "toilet",
-  "tv",
-  "laptop",
-  "mouse",
-  "remote",
-  "keyboard",
-  "cell phone",
-  "microwave",
-  "oven",
-  "toaster",
-  "sink",
-  "refrigerator",
-  "book",
-  "clock",
-  "vase",
-  "scissors",
-  "teddy bear",
-  "hair drier",
-  "toothbrush"
-]
-"""
-
-File.write!(classes_path, classes_json)
+if not File.exists?(classes_path) do
+  classes_url =   
+    "https://raw.githubusercontent.com/membraneframework/membrane_yolo_plugin/master/examples/models/coco_classes.json"
+  
+  %{status: 200, body: data} = Req.get!(classes_url)
+  File.write!(classes_path, data)
+end
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
@@ -162,7 +89,7 @@ File.write!(classes_path, classes_json)
 Let's define a Membrane Pipeline, that takes a video stream from the computer camera and performs live object detection...
 
 ```elixir
-defmodule YOLOCameraCapturePipeline do
+defmodule YOLO.CameraCapture.Pipeline do
   use Membrane.Pipeline
 
   @impl true
@@ -194,7 +121,7 @@ end
 ... and run it. After up to few seconds a player showing the stream with bouncing boxes should appear.
 
 ```elixir
-{:ok, _supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLOCameraCapturePipeline, [])
+{:ok, _supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.CameraCapture.Pipeline, [])
 Process.sleep(:infinity)
 ```
 
@@ -205,7 +132,7 @@ Process.sleep(:infinity)
 We can also take a MP4 file and play it, performing live object detection in the same moment.
 
 ```elixir
-defmodule YOLOMP4Pipeline do
+defmodule YOLO.MP4.LivePipeline do
   use Membrane.Pipeline
 
   @impl true
@@ -245,7 +172,7 @@ end
 If you won't see a player displaying a modified stream, look for it in open apps on your computer. There is a chance it is opend, but didn't pop up ;)
 
 ```elixir
-{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLOMP4Pipeline, [])
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.MP4.LivePipeline, [])
 Process.monitor(supervisor)
 
 receive do
@@ -265,7 +192,7 @@ The pipeline below takes an MP4 file, performs object detection on each frame fr
 ```elixir
 result_file = tmp_dir |> Path.join("street_with_bounding_boxes.mp4")
 
-defmodule YOLOMP4OfflinePipeline do
+defmodule YOLO.MP4.OfflinePipeline do
   use Membrane.Pipeline
   require Membrane.Logger
 
@@ -320,7 +247,7 @@ end
 We can now run this pipeline and wait until it finishes the processing.
 
 ```elixir
-{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLOMP4OfflinePipeline, [])
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.MP4.OfflinePipeline, [])
 Process.monitor(supervisor)
 
 receive do

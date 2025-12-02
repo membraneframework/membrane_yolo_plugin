@@ -42,7 +42,7 @@ if not File.exists?(model_path) do
   File.write!(model_path, data)
 end
 
-defmodule YOLOMP4Pipeline do
+defmodule YOLO.MP4.LivePipeline do
   use Membrane.Pipeline
 
   @impl true
@@ -77,7 +77,7 @@ defmodule YOLOMP4Pipeline do
   end
 end
 
-{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLOMP4Pipeline, [])
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.MP4.LivePipeline, [])
 Process.monitor(supervisor)
 
 receive do

@@ -44,7 +44,7 @@ end
 
 result_file_path = "examples/outputs/street_bounding_boxes.mp4"
 
-defmodule YOLOMP4Pipeline do
+defmodule YOLO.MP4.OfflinePipeline do
   use Membrane.Pipeline
   require Membrane.Logger
 
@@ -91,7 +91,7 @@ defmodule YOLOMP4Pipeline do
   end
 end
 
-{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLOMP4Pipeline, [])
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.MP4.OfflinePipeline, [])
 Process.monitor(supervisor)
 
 receive do

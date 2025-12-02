@@ -1,10 +1,14 @@
 defmodule Membrane.YOLO.DrawUtils do
   @moduledoc false
-  # This moddule contains slightly modified code from kino_yolo to avoid adding kino_yolo
-  # and improve colors of drawn boxes.
+
+  # This moddule contains slightly modified code from kino_yolo
+  #   - to avoid adding kino to dependencies
+  #   - to avoid having GitHub dependency in order to publish this package on Hex
+  #   - and improve colors of drawn boxes.
+
   # Original code source:
-  #  - https://github.com/poeticoding/kino_yolo/blob/main/lib/kino_yolo/draw.ex
-  #  - https://github.com/poeticoding/kino_yolo/blob/main/lib/kino_yolo/colors.ex
+  #   - https://github.com/poeticoding/kino_yolo/blob/main/lib/kino_yolo/draw.ex
+  #   - https://github.com/poeticoding/kino_yolo/blob/main/lib/kino_yolo/colors.ex
 
   @class_colors [
                   "#FF0000",
