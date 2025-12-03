@@ -1,5 +1,9 @@
 defmodule Membrane.YOLO.Drawer do
   @moduledoc """
+  A filter that draws bounding boxes around detected objects on each video frame.
+
+  It expects that previous element in the pipeline is a `Membrane.YOLO.Detector`
+  that adds detection results to the buffer metadata under `:detected_objects` key.
   """
 
   use Membrane.Filter

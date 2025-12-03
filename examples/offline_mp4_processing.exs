@@ -52,7 +52,7 @@ defmodule YOLO.MP4.OfflinePipeline do
         format: :RGB,
         output_width: 640
       })
-      |> child(:yolo_live_filter, %Membrane.YOLO.Detector{
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
         mode: :offline,
         yolo_model:
           YOLO.load(

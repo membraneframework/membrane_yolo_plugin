@@ -2,15 +2,16 @@ defmodule Membrane.YOLO.Detector do
   @moduledoc """
   A Membrane filter that performs real-time object detection on video frames.
 
-  This filter uses a YOLO model to detect objects in incoming video frames. It can either draw bounding
-  boxes on the frames or add detected objects to buffers metadata.
+  This filter uses a YOLO model to detect objects in incoming video frames. Detected objects
+  are added to the metadata of the output buffers.
 
-  The object detecion is performed only on every N-th frame to maintain real-time performance.
-  The value of N is determined dynamically based on the model's performance and the input
-  stream's framerate and it can change over time.
+  It can work in three modes: `:offline`, `:live`, and `:live_low_latency`.
+  Take a look at the description of `:mode` option for more details.
 
-  If you want to perform offline object detection on all video frames at the expense of the possibility
-  of processing stream slower than real-time, consider using `Membrane.YOLO.OfflineFilter` instead.
+  If you want to draw bounding boxes around detected objects, plug `Membrane.YOLO.Drawer`
+  just after this filter in your pipeline.
+
+  It uses under the hood `:yolo` package from hex.pm.
   """
 
   use Membrane.Filter
@@ -29,9 +30,15 @@ defmodule Membrane.YOLO.Detector do
                 description: """
                 The mode in which the filter operates.
                 - `:offline` - performs object detection on every frame.
-                - `:live` - performs real-time object detection TODO continue.
-                - `:live_low_latency` - performs real-time object detection with minimal latency, but
-                  bounding boxes may be delayed related to the frames they correspond to.
+                - `:live` - performs real-time object detection on every N-th frame,
+                  where N is dynamically determined to maintain real-time performance. Then object
+                  detection results are propagated on neighboring frames. In this mode, the filter
+                  adds latency that is bigger or equal to the time needed to perform object detection
+                  on a single frame. Take a look at `additional_latency` option docs for more details.
+                - `:live_low_latency` - works very similarly to `:live` mode, but it doesn't add
+                  latency to the stream. However, bounding boxes may be delayed related to the frames
+                  they correspond to. The delay is not bigger than doubled time needed to perform object
+                  detection on a single frame.
                 """
               ],
               additional_latency: [
