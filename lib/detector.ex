@@ -51,11 +51,14 @@ defmodule Membrane.YOLO.Detector do
 
                 Defaults to `0` seconds.
 
+                This option can be used only when `:mode?` is set to `:live`.
+
                 When set, it will be added to the initial latency introduced by the filter.
                 Increasing its value will lower the chance of sending any buffer too late
-                comparing to the timestamp and moment of returning the first buffer.
-
-                This option can be used only when `:mode?` is set to `:live`.
+                comparing to the timestamp and moment of returning the first buffer. It is recommended
+                to use it when you can tolerate some additional latency in favor of guaranteeing that
+                no delayed buffers are returned. In most cases 500 milliseconds should be totally
+                sufficient, however it depends on the performance of the hardware running the pipeline.
                 """
               ]
 
