@@ -6,10 +6,9 @@ hardware_acceleration =
 
 Mix.install(
   [
-    {
-      :membrane_yolo_plugin,
-      github: "membraneframework/membrane_yolo_plugin", branch: "implementation"
-    },
+    # {:membrane_yolo_plugin, path: "."},
+    {:membrane_yolo_plugin,
+     github: "membraneframework/membrane_yolo_plugin", branch: "implementation"},
     {:membrane_core, "~> 1.0"},
     {:membrane_camera_capture_plugin, "~> 0.7.3"},
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},

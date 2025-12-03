@@ -38,8 +38,7 @@ defmodule Membrane.YOLO.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.0"},
-      {:membrane_raw_video_format,
-       github: "membraneframework/membrane_raw_video_format", branch: "to_image"},
+      {:membrane_raw_video_format, "~> 0.4.3"},
       {:yolo, "~> 0.2.0"},
       {:kino_yolo, github: "poeticoding/kino_yolo"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},

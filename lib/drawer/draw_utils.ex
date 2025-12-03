@@ -1,4 +1,4 @@
-defmodule Membrane.YOLO.DrawUtils do
+defmodule Membrane.YOLO.Drawer.DrawUtils do
   @moduledoc false
 
   # This moddule contains slightly modified code from kino_yolo
@@ -109,22 +109,6 @@ defmodule Membrane.YOLO.DrawUtils do
 
   defp class_color(class_idx) do
     Map.get(@class_colors, class_idx, "#FF0000")
-  end
-
-  def draw_boxes_or_update_metadata(buffer, detected_objects, format, true = _draw_boxes?) do
-    {:ok, image} =
-      Membrane.RawVideo.payload_to_image(buffer.payload, format)
-
-    image = draw_detected_objects(image, detected_objects)
-    {:ok, new_payload, _stream_format} = Membrane.RawVideo.image_to_payload(image)
-    %Membrane.Buffer{buffer | payload: new_payload}
-  end
-
-  def draw_boxes_or_update_metadata(buffer, detected_objects, _format, false = _draw_boxes?) do
-    %Membrane.Buffer{
-      buffer
-      | metadata: Map.put(buffer.metadata, :detected_objects, detected_objects)
-    }
   end
 
   @spec draw_detected_objects(
