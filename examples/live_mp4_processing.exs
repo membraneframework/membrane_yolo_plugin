@@ -50,7 +50,7 @@ defmodule YOLO.MP4.LivePipeline do
         format: :RGB,
         output_width: 640
       })
-      |> child(:yolo_live_filter, %Membrane.YOLO.Detector{
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
         mode: :live,
         yolo_model:
           YOLO.load(

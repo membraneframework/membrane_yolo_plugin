@@ -16,12 +16,11 @@ Mix.install(
     {:membrane_yolo_plugin,
      github: "membraneframework/membrane_yolo_plugin", branch: "implementation"},
     {:membrane_core, "~> 1.0"},
-    {:membrane_camera_capture_plugin, "~> 0.7.3"},
+    {:membrane_camera_capture_plugin, "~> 0.7.4"},
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
-    {:membrane_raw_video_format, "~> 0.16.3"},
-    {:boombox, github: "membraneframework/boombox"},
+    {:boombox, "~> 0.2.8"},
     {:exla, "~> 0.10"},
-    {:kino, "~> 0.17.0"}
+    {:kino, "~> 0.18"}
   ],
   config: [
     ortex: [
@@ -76,9 +75,9 @@ classes_name = "coco_classes.json"
 classes_path = tmp_dir |> Path.join(classes_name)
 
 if not File.exists?(classes_path) do
-  classes_url =
+  classes_url =   
     "https://raw.githubusercontent.com/membraneframework/membrane_yolo_plugin/master/examples/models/coco_classes.json"
-
+  
   %{status: 200, body: data} = Req.get!(classes_url)
   File.write!(classes_path, data)
 end
@@ -105,14 +104,14 @@ defmodule YOLO.CameraCapture.Pipeline do
         output_width: 640
       })
       |> child(:yolo_detector, %Membrane.YOLO.Detector{
+        mode: :live_low_latency,
         yolo_model:
           YOLO.load(
             model_impl: YOLO.Models.YOLOX,
             model_path: unquote(model_path),
             classes_path: unquote(classes_path),
             eps: [unquote(hardware_acceleration)]
-          ),
-        mode: :live_low_latency
+          )
       })
       |> child(:yolo_drawer, Membrane.YOLO.Drawer)
       |> via_in(:input, options: [kind: :video])
@@ -151,7 +150,8 @@ defmodule YOLO.MP4.LivePipeline do
         output_width: 640
       })
       |> child(:realtimer, Membrane.Realtimer)
-      |> child(:yolo_live_filter, %Membrane.YOLO.LiveFilter{
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
+        mode: :live,
         yolo_model:
           YOLO.load(
             model_impl: YOLO.Models.YOLOX,
@@ -161,6 +161,7 @@ defmodule YOLO.MP4.LivePipeline do
           ),
         additional_latency: Membrane.Time.milliseconds(500)
       })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
       |> via_in(:input, options: [kind: :video])
       |> child(:boombox_sink, %Boombox.Bin{output: :player})
 
@@ -214,7 +215,8 @@ defmodule YOLO.MP4.OfflinePipeline do
         format: :RGB,
         output_width: 640
       })
-      |> child(:yolo_live_filter, %Membrane.YOLO.OfflineFilter{
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
+        mode: :offline,
         yolo_model:
           YOLO.load(
             model_impl: YOLO.Models.YOLOX,
@@ -223,6 +225,7 @@ defmodule YOLO.MP4.OfflinePipeline do
             eps: [unquote(hardware_acceleration)]
           )
       })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
       |> child(:debug_logger, %Membrane.Debug.Filter{
         handle_buffer: fn buffer ->
           pts_ms = Membrane.Time.as_milliseconds(buffer.pts, :round)
