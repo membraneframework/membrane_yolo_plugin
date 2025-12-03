@@ -6,16 +6,11 @@ hardware_acceleration =
 
 Mix.install(
   [
-    {
-      :membrane_yolo_plugin,
-      github: "membraneframework/membrane_yolo_plugin", branch: "implementation"
-    },
+    {:membrane_yolo_plugin, path: Path.join(__DIR__, "..")},
     {:membrane_core, "~> 1.0"},
-    {:membrane_camera_capture_plugin, "~> 0.7.3"},
+    {:membrane_camera_capture_plugin, "~> 0.7.4"},
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
-    {:membrane_raw_video_format, "~> 0.4.3"},
-    {:boombox, github: "membraneframework/boombox"},
-    {:kino_yolo, github: "poeticoding/kino_yolo"},
+    {:boombox, "~> 0.2.8"},
     {:exla, "~> 0.10"}
   ],
   config: [
@@ -50,11 +45,13 @@ defmodule YOLO.MP4.LivePipeline do
       child(:mp4_source, %Boombox.Bin{input: "examples/fixtures/street.mp4"})
       |> via_out(:output, options: [kind: :video])
       |> child(:transcoder, %Membrane.Transcoder{output_stream_format: Membrane.RawVideo})
+      |> child(:realtimer, Membrane.Realtimer)
       |> child(:swscale_converter, %Membrane.FFmpeg.SWScale.Converter{
         format: :RGB,
         output_width: 640
       })
-      |> child(:yolo_live_filter, %Membrane.YOLO.LiveFilter{
+      |> child(:yolo_live_filter, %Membrane.YOLO.Detector{
+        mode: :live,
         yolo_model:
           YOLO.load(
             model_impl: YOLO.Models.YOLOX,
@@ -64,6 +61,7 @@ defmodule YOLO.MP4.LivePipeline do
           ),
         additional_latency: Membrane.Time.milliseconds(500)
       })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
       |> via_in(:input, options: [kind: :video])
       |> child(:boombox_sink, %Boombox.Bin{output: :player})
 
@@ -71,7 +69,7 @@ defmodule YOLO.MP4.LivePipeline do
   end
 
   @impl true
-  def handle_child_notification(:processing_finished, :boombox_sink, ctx, state) do
+  def handle_child_notification(:processing_finished, :boombox_sink, _ctx, state) do
     {[terminate: :normal], state}
   end
 end

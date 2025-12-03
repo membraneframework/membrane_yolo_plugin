@@ -20,7 +20,6 @@ Mix.install(
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
     {:membrane_raw_video_format, "~> 0.16.3"},
     {:boombox, github: "membraneframework/boombox"},
-    {:kino_yolo, github: "poeticoding/kino_yolo"},
     {:exla, "~> 0.10"},
     {:kino, "~> 0.17.0"}
   ],
@@ -77,9 +76,9 @@ classes_name = "coco_classes.json"
 classes_path = tmp_dir |> Path.join(classes_name)
 
 if not File.exists?(classes_path) do
-  classes_url =   
+  classes_url =
     "https://raw.githubusercontent.com/membraneframework/membrane_yolo_plugin/master/examples/models/coco_classes.json"
-  
+
   %{status: 200, body: data} = Req.get!(classes_url)
   File.write!(classes_path, data)
 end
@@ -105,7 +104,7 @@ defmodule YOLO.CameraCapture.Pipeline do
         format: :RGB,
         output_width: 640
       })
-      |> child(:yolo_live_filter, %Membrane.YOLO.LiveFilter{
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
         yolo_model:
           YOLO.load(
             model_impl: YOLO.Models.YOLOX,
@@ -113,8 +112,9 @@ defmodule YOLO.CameraCapture.Pipeline do
             classes_path: unquote(classes_path),
             eps: [unquote(hardware_acceleration)]
           ),
-        low_latency_mode?: true
+        mode: :live_low_latency
       })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
       |> via_in(:input, options: [kind: :video])
       |> child(:boombox_sink, %Boombox.Bin{output: :player})
 

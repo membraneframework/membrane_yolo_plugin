@@ -6,16 +6,11 @@ hardware_acceleration =
 
 Mix.install(
   [
-    {
-      :membrane_yolo_plugin,
-      github: "membraneframework/membrane_yolo_plugin", branch: "implementation"
-    },
+    {:membrane_yolo_plugin, path: Path.join(__DIR__, "..")},
     {:membrane_core, "~> 1.0"},
-    {:membrane_camera_capture_plugin, "~> 0.7.3"},
+    {:membrane_camera_capture_plugin, "~> 0.7.4"},
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
-    {:membrane_raw_video_format, "~> 0.4.3"},
-    {:boombox, github: "membraneframework/boombox"},
-    {:kino_yolo, github: "poeticoding/kino_yolo"},
+    {:boombox, "~> 0.2.8"},
     {:exla, "~> 0.10"}
   ],
   config: [
@@ -57,7 +52,8 @@ defmodule YOLO.MP4.OfflinePipeline do
         format: :RGB,
         output_width: 640
       })
-      |> child(:yolo_live_filter, %Membrane.YOLO.OfflineFilter{
+      |> child(:yolo_live_filter, %Membrane.YOLO.Detector{
+        mode: :offline,
         yolo_model:
           YOLO.load(
             model_impl: YOLO.Models.YOLOX,
@@ -66,6 +62,7 @@ defmodule YOLO.MP4.OfflinePipeline do
             eps: [unquote(hardware_acceleration)]
           )
       })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
       |> child(:debug_logger, %Membrane.Debug.Filter{
         handle_buffer: fn buffer ->
           pts_ms = Membrane.Time.as_milliseconds(buffer.pts, :round)

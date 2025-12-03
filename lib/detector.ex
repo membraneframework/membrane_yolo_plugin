@@ -54,8 +54,8 @@ defmodule Membrane.YOLO.Detector do
 
   @impl true
   def handle_init(_ctx, opts) do
-    if opts.low_latency_mode? and opts.additional_latency != Membrane.Time.seconds(0) do
-      raise "`additional_latency` option cannot be used when `low_latency_mode?` is set to `true`"
+    if opts.mode != :live and opts.additional_latency != Membrane.Time.seconds(0) do
+      raise "`additional_latency` option cannot be used when `mode` is not set to `:live`"
     end
 
     state = %__MODULE__.State{

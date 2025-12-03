@@ -21,7 +21,7 @@ defmodule Membrane.YOLO.Detector.Implementations.Utils do
         |> YOLO.detect(image, frame_scaler: YOLO.FrameScalers.ImageScaler)
         |> YOLO.to_detected_objects(state.yolo_model.classes)
 
-      GenServer.cast(my_pid, {:detection_complete, detected_objects})
+      send(my_pid, {:detection_complete, detected_objects})
     end)
   end
 

@@ -27,4 +27,9 @@ defmodule Membrane.YOLO.Detector.Implementations.Offline do
   def handle_info(message, _ctx, _state) do
     raise "Unhandled message: #{inspect(message)}"
   end
+
+  @impl true
+  def handle_end_of_stream(_ctx, %State{} = state) do
+    {[end_of_stream: :output], state}
+  end
 end

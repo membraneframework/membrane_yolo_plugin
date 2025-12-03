@@ -6,15 +6,11 @@ hardware_acceleration =
 
 Mix.install(
   [
-    # {:membrane_yolo_plugin, path: "."},
-    {:membrane_yolo_plugin,
-     github: "membraneframework/membrane_yolo_plugin", branch: "implementation"},
+    {:membrane_yolo_plugin, path: Path.join(__DIR__, "..")},
     {:membrane_core, "~> 1.0"},
-    {:membrane_camera_capture_plugin, "~> 0.7.3"},
+    {:membrane_camera_capture_plugin, "~> 0.7.4"},
     {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
-    {:membrane_raw_video_format, "~> 0.4.3"},
-    {:boombox, github: "membraneframework/boombox"},
-    {:kino_yolo, github: "poeticoding/kino_yolo"},
+    {:boombox, "~> 0.2.8"},
     {:exla, "~> 0.10"}
   ],
   config: [
@@ -51,16 +47,17 @@ defmodule YOLO.CameraCapture.Pipeline do
         format: :RGB,
         output_width: 640
       })
-      |> child(:yolo_live_filter, %Membrane.YOLO.LiveFilter{
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
+        mode: :live_low_latency,
         yolo_model:
           YOLO.load(
             model_impl: YOLO.Models.YOLOX,
             model_path: "examples/models/yolox_l.onnx",
             classes_path: "examples/models/coco_classes.json",
             eps: [unquote(hardware_acceleration)]
-          ),
-        low_latency_mode?: true
+          )
       })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
       |> via_in(:input, options: [kind: :video])
       |> child(:boombox_sink, %Boombox.Bin{output: :player})
 

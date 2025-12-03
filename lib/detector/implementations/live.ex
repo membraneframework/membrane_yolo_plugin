@@ -32,8 +32,20 @@ defmodule Membrane.YOLO.Detector.Implementations.Live do
   end
 
   @impl true
-  def handle_info({:processed_buffer, buffer}, _ctx, %State{} = state) do
-    {[buffer: {:output, buffer}], state}
+  def handle_info({:processed_buffer, buffer}, ctx, %State{} = state) do
+    state = state |> Map.update!(:awaiting_buffers_count, &(&1 - 1))
+
+    maybe_eos =
+      if state.awaiting_buffers_count == 0 and ctx.pads.input.end_of_stream?,
+        do: [end_of_stream: :output],
+        else: []
+
+    {[buffer: {:output, buffer}] ++ maybe_eos, state}
+  end
+
+  @impl true
+  def handle_end_of_stream(_ctx, %State{} = state) do
+    {[], state}
   end
 
   defp send_after_to_myself(buffer, state) do
@@ -56,7 +68,7 @@ defmodule Membrane.YOLO.Detector.Implementations.Live do
       send_after_timeout
     )
 
-    state
+    state |> Map.update!(:awaiting_buffers_count, &(&1 + 1))
   end
 
   defp handle_first_buffer(buffer, %State{} = state) do

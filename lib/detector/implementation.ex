@@ -11,6 +11,9 @@ defmodule Membrane.YOLO.Detector.Implementation do
   @callback handle_info(message :: any(), CallbackContext.t(), State.t()) ::
               {keyword(), State.t()}
 
+  @callback handle_end_of_stream(CallbackContext.t(), State.t()) ::
+              {keyword(), State.t()}
+
   @spec resolve_implementation(mode :: :offline | :live | :live_low_latency) :: module()
   def resolve_implementation(:offline), do: Implementations.Offline
   def resolve_implementation(:live), do: Implementations.Live

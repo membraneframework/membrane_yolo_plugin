@@ -8,7 +8,8 @@ defmodule Membrane.YOLO.Detector.State do
                 first_buffer_monotonic_time: nil,
                 last_detection_results: nil,
                 buffers_qex: Qex.new(),
-                detection_in_progress?: false
+                detection_in_progress?: false,
+                awaiting_buffers_count: 0
               ]
 
   @type t :: %__MODULE__{}

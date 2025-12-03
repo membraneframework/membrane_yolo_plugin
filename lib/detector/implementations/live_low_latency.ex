@@ -21,7 +21,12 @@ defmodule Membrane.YOLO.Detector.Implementations.LiveLowLatency do
 
   @impl true
   def handle_info({:detection_complete, detected_objects}, _ctx, %State{} = state) do
-    state = %{state | last_detection_results: detected_objects}
+    state = %{state | last_detection_results: detected_objects, detection_in_progress?: false}
     {[], state}
+  end
+
+  @impl true
+  def handle_end_of_stream(_ctx, %State{} = state) do
+    {[end_of_stream: :output], state}
   end
 end
