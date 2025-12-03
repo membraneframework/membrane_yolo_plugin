@@ -87,4 +87,9 @@ defmodule Membrane.YOLO.Detector do
   def handle_info(msg, ctx, state) do
     state.impl.handle_info(msg, ctx, state)
   end
+
+  @impl true
+  def handle_end_of_stream(:input, ctx, state) do
+    state.impl.handle_end_of_stream(ctx, state)
+  end
 end
