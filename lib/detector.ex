@@ -22,7 +22,7 @@ defmodule Membrane.YOLO.Detector do
   def_options yolo_model: [
                 spec: YOLO.Model.t(),
                 description: """
-                YOLO model used for inference. The result of `YOLO.load/2`.
+                YOLO model used for inference. The result of `YOLO.load/1`.
                 """
               ],
               mode: [
