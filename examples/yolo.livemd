@@ -1,0 +1,270 @@
+# Membrane YOLO Plugin demos
+
+```elixir
+hardware_acceleration =
+  case :os.type() do
+    {:unix, :darwin} -> :coreml
+    {:unix, :linux} -> :cuda
+  end
+
+with {:unix, :darwin} <- :os.type() do
+  System.put_env("PATH", "/opt/homebrew/bin:#{System.get_env("PATH")}")
+end
+
+Mix.install(
+  [
+    {:membrane_yolo_plugin,
+     github: "membraneframework/membrane_yolo_plugin", branch: "implementation"},
+    {:membrane_core, "~> 1.0"},
+    {:membrane_camera_capture_plugin, "~> 0.7.4"},
+    {:membrane_ffmpeg_swscale_plugin, "~> 0.16.3"},
+    {:boombox, "~> 0.2.8"},
+    {:exla, "~> 0.10"},
+    {:kino, "~> 0.18"}
+  ],
+  config: [
+    ortex: [
+      {Ortex.Native, [features: [hardware_acceleration]]}
+    ],
+    nx: [
+      default_backend: EXLA.Backend
+    ]
+  ]
+)
+
+Logger.configure(level: :info)
+```
+
+## Download fixtures and model
+
+```elixir
+tmp_dir = System.tmp_dir!() |> Path.join("membrane_yolo_plugin")
+File.mkdir(tmp_dir)
+
+model_name = "yolox_l.onnx"
+model_path = tmp_dir |> Path.join(model_name)
+
+if not File.exists?(model_path) do
+  model_url =
+    "https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/#{model_name}"
+
+  %{body: data} = Req.get!(model_url)
+  File.write!(model_path, data)
+end
+
+fixtures_url =
+  "https://raw.githubusercontent.com/membraneframework/membrane_yolo_plugin/master/examples/fixtures"
+
+long_mp4_name = "street.mp4"
+long_mp4_path = tmp_dir |> Path.join(long_mp4_name)
+
+if not File.exists?(long_mp4_name) do
+  %{status: 200, body: data} = Req.get!("#{fixtures_url}/#{long_mp4_name}")
+  File.write!(long_mp4_path, data)
+end
+
+short_mp4_name = "street_short.mp4"
+short_mp4_path = tmp_dir |> Path.join(short_mp4_name)
+
+if not File.exists?(short_mp4_path) do
+  %{status: 200, body: data} = Req.get!("#{fixtures_url}/#{short_mp4_name}")
+  File.write!(short_mp4_path, data)
+end
+
+classes_name = "coco_classes.json"
+classes_path = tmp_dir |> Path.join(classes_name)
+
+if not File.exists?(classes_path) do
+  classes_url =   
+    "https://raw.githubusercontent.com/membraneframework/membrane_yolo_plugin/master/examples/models/coco_classes.json"
+  
+  %{status: 200, body: data} = Req.get!(classes_url)
+  File.write!(classes_path, data)
+end
+
+:ok
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Live object detection on a stream from the local camera
+
+Let's define a Membrane Pipeline, that takes a video stream from the computer camera and performs live object detection...
+
+```elixir
+defmodule YOLO.CameraCapture.Pipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _opts) do
+    spec =
+      child(:camera_capture, Membrane.CameraCapture)
+      |> child(:swscale_converter, %Membrane.FFmpeg.SWScale.Converter{
+        format: :RGB,
+        output_width: 640
+      })
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
+        mode: :live_low_latency,
+        yolo_model:
+          YOLO.load(
+            model_impl: YOLO.Models.YOLOX,
+            model_path: unquote(model_path),
+            classes_path: unquote(classes_path),
+            eps: [unquote(hardware_acceleration)]
+          )
+      })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
+      |> via_in(:input, options: [kind: :video])
+      |> child(:boombox_sink, %Boombox.Bin{output: :player})
+
+    {[spec: spec], %{}}
+  end
+end
+```
+
+... and run it. After up to few seconds a player showing the stream with bouncing boxes should appear. If it is not visible after few seconds, look for it in the dock.
+
+```elixir
+{:ok, _supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.CameraCapture.Pipeline, [])
+Process.sleep(:infinity)
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Live object detection on a MP4 file
+
+We can also take a MP4 file and play it, performing live object detection in the same moment.
+
+```elixir
+defmodule YOLO.MP4.LivePipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _opts) do
+    spec =
+      child(:mp4_source, %Boombox.Bin{input: unquote(long_mp4_path)})
+      |> via_out(:output, options: [kind: :video])
+      |> child(:transcoder, %Membrane.Transcoder{output_stream_format: Membrane.RawVideo})
+      |> child(:swscale_converter, %Membrane.FFmpeg.SWScale.Converter{
+        format: :RGB,
+        output_width: 640
+      })
+      |> child(:realtimer, Membrane.Realtimer)
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
+        mode: :live,
+        yolo_model:
+          YOLO.load(
+            model_impl: YOLO.Models.YOLOX,
+            model_path: unquote(model_path),
+            classes_path: unquote(classes_path),
+            eps: [unquote(hardware_acceleration)]
+          ),
+        additional_latency: Membrane.Time.milliseconds(500)
+      })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
+      |> via_in(:input, options: [kind: :video])
+      |> child(:boombox_sink, %Boombox.Bin{output: :player})
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_child_notification(:processing_finished, :boombox_sink, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+end
+```
+
+If you won't see a player displaying a modified stream, look for it in open apps on your computer. There is a chance it is opend, but didn't pop up ;)
+
+```elixir
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.MP4.LivePipeline, [])
+Process.monitor(supervisor)
+
+receive do
+  {:DOWN, _ref, :process, _pid, :normal} -> :ok
+  {:DOWN, _ref, :process, _pid, reason} -> reason
+end
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Offline object detection on a MP4 file
+
+In both examples above, we have used `Membrane.YOLO.LiveFilter`. If you want to perform offline object detection, because you don't need live performance, you can use `Membrane.YOLO.OfflineFilter`.
+
+The pipeline below takes an MP4 file, performs object detection on each frame from this file and saves results in another MP4 file.
+
+```elixir
+result_file = tmp_dir |> Path.join("street_with_bounding_boxes.mp4")
+
+defmodule YOLO.MP4.OfflinePipeline do
+  use Membrane.Pipeline
+  require Membrane.Logger
+
+  @impl true
+  def handle_init(_ctx, _opts) do
+    frame = Kino.Frame.new() |> Kino.render()
+    Kino.Frame.render(frame, "Processed 0 ms of 10_000 ms of fixture video")
+
+    spec =
+      child(:mp4_source, %Boombox.Bin{input: unquote(short_mp4_path)})
+      |> via_out(:output, options: [kind: :video])
+      |> child(:transcoder, %Membrane.Transcoder{output_stream_format: Membrane.RawVideo})
+      |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{
+        format: :RGB,
+        output_width: 640
+      })
+      |> child(:yolo_detector, %Membrane.YOLO.Detector{
+        mode: :offline,
+        yolo_model:
+          YOLO.load(
+            model_impl: YOLO.Models.YOLOX,
+            model_path: unquote(model_path),
+            classes_path: unquote(classes_path),
+            eps: [unquote(hardware_acceleration)]
+          )
+      })
+      |> child(:yolo_drawer, Membrane.YOLO.Drawer)
+      |> child(:debug_logger, %Membrane.Debug.Filter{
+        handle_buffer: fn buffer ->
+          pts_ms = Membrane.Time.as_milliseconds(buffer.pts, :round)
+
+          Kino.Frame.render(
+            frame,
+            "Processed #{inspect(pts_ms)} ms of 10_000 ms of fixture video"
+          )
+        end
+      })
+      |> child(:i420_converter, %Membrane.FFmpeg.SWScale.Converter{
+        format: :I420
+      })
+      |> via_in(:input, options: [kind: :video])
+      |> child(:boombox_sink, %Boombox.Bin{output: unquote(result_file)})
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_child_notification(:processing_finished, :boombox_sink, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+end
+```
+
+We can now run this pipeline and wait until it finishes the processing.
+
+```elixir
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(YOLO.MP4.OfflinePipeline, [])
+Process.monitor(supervisor)
+
+receive do
+  {:DOWN, _ref, :process, _pid, :normal} -> :ok
+end
+```
+
+Now, let's display the result stream using `Boombox`. If the player won't pop up on its own, look for it in your dock.
+
+```elixir
+Boombox.play(result_file)
+```

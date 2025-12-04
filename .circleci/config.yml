@@ -3,7 +3,7 @@ orbs:
   elixir: membraneframework/elixir@1
 
 workflows:
-  version: 2
+  version: 3
   build:
     jobs:
       - elixir/build_test:
