@@ -138,8 +138,8 @@ defmodule Membrane.YOLO.Drawer.DrawUtils do
       # creating description label
       desc_label = description_label_image(description)
 
-      {full_width, full_height, _} = Image.shape(image)
-      {desc_width, desc_height, _} = Image.shape(desc_label)
+      {full_width, full_height, _bands} = Image.shape(image)
+      {desc_width, desc_height, _bands} = Image.shape(desc_label)
 
       Image.Draw.image!(
         image_with_detections,
@@ -158,7 +158,7 @@ defmodule Membrane.YOLO.Drawer.DrawUtils do
     color = class_color(detection.class_idx)
 
     class_label = class_label_image(detection)
-    {_, text_height, _} = Image.shape(class_label)
+    {_width, text_height, _bands} = Image.shape(class_label)
 
     image
     |> Image.Draw.rect!(left, top, bbox.w, bbox.h,

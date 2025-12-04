@@ -1,4 +1,5 @@
 defmodule Membrane.YOLO.Detector.Implementations.Offline do
+  @moduledoc false
   @behaviour Membrane.YOLO.Detector.Implementation
 
   alias Membrane.YOLO.Detector.Implementations.Utils
