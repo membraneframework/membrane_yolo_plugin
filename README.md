@@ -2,7 +2,7 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_yolo_plugin.svg)](https://hex.pm/packages/membrane_yolo_plugin)
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_yolo_plugin)
-[![CircleCI](https://circleci.com/gh/membraneframework/membrane_yolo_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_yolo§  §_plugin)
+[![CircleCI](https://circleci.com/gh/membraneframework/membrane_yolo_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_yolo_plugin)
 
 Contains 2 Membrane Filters:
  - `Membrane.YOLO.Detector` - for running object detection on a video stream.
