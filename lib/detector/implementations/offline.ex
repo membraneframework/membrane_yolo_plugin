@@ -25,6 +25,7 @@ defmodule Membrane.YOLO.Detector.Implementations.Offline do
   end
 
   @impl true
+  @spec handle_info(any(), Membrane.Element.CallbackContext.t(), State.t()) :: no_return()
   def handle_info(message, _ctx, _state) do
     raise "Unhandled message: #{inspect(message)}"
   end

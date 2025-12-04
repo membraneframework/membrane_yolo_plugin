@@ -9,7 +9,7 @@ defmodule Membrane.YOLO.Detector.Implementation do
               {keyword(), State.t()}
 
   @callback handle_info(message :: any(), CallbackContext.t(), State.t()) ::
-              {keyword(), State.t()}
+              {keyword(), State.t()} | no_return()
 
   @callback handle_end_of_stream(CallbackContext.t(), State.t()) ::
               {keyword(), State.t()}

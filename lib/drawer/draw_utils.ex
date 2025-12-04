@@ -10,6 +10,9 @@ defmodule Membrane.YOLO.Drawer.DrawUtils do
   #   - https://github.com/poeticoding/kino_yolo/blob/main/lib/kino_yolo/draw.ex
   #   - https://github.com/poeticoding/kino_yolo/blob/main/lib/kino_yolo/colors.ex
 
+  require Image
+  require Vix.Vips.Image
+
   @class_colors [
                   "#FF0000",
                   "#00FF00",
