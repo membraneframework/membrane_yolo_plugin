@@ -9,7 +9,7 @@ defmodule Membrane.YOLO.Detector.Implementations.Utils do
           ctx :: Membrane.Element.CallbackContext.t(),
           state :: State.t()
         ) :: {:ok, pid()}
-  def start_link_detection_task(buffer, ctx, %State{} = state) do
+  def start_link_detection_task(%Buffer{} = buffer, ctx, %State{} = state) do
     my_pid = self()
 
     Task.start_link(fn ->
@@ -26,7 +26,7 @@ defmodule Membrane.YOLO.Detector.Implementations.Utils do
   end
 
   @spec update_buffer_metadata(Buffer.t(), list()) :: Buffer.t()
-  def update_buffer_metadata(buffer, detected_objects) do
+  def update_buffer_metadata(%Buffer{} = buffer, detected_objects) do
     metadata = buffer.metadata |> Map.put(:detected_objects, detected_objects || [])
     %Buffer{buffer | metadata: metadata}
   end

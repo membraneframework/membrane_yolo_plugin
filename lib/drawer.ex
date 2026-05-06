@@ -15,7 +15,7 @@ defmodule Membrane.YOLO.Drawer do
   def handle_init(_ctx, _opts), do: {[], %{}}
 
   @impl true
-  def handle_buffer(:input, buffer, ctx, state) do
+  def handle_buffer(:input, %Membrane.Buffer{} = buffer, ctx, state) do
     if not is_map_key(buffer.metadata, :detected_objects) do
       raise """
       Buffer metadata does not contain `:detected_objects` key.

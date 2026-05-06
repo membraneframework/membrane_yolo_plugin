@@ -6,7 +6,7 @@ defmodule Membrane.YOLO.Detector.Implementations.Offline do
   alias Membrane.YOLO.Detector.State
 
   @impl true
-  def handle_buffer(buffer, ctx, %State{} = state) do
+  def handle_buffer(%Membrane.Buffer{} = buffer, ctx, %State{} = state) do
     {:ok, image} =
       Membrane.RawVideo.payload_to_image(buffer.payload, ctx.pads.input.stream_format)
 
