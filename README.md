@@ -19,7 +19,7 @@ The package can be installed by adding `membrane_yolo_plugin` to your list of de
 ```elixir
 def deps do
   [
-    {:membrane_yolo_plugin, "~> 0.1.1"}
+    {:membrane_yolo_plugin, "~> 0.1.2"}
   ]
 end
 ```
